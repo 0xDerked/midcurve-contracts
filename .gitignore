@@ -6,3 +6,4 @@ cache
 typechain
 forge-cache
 out
+typechain-types

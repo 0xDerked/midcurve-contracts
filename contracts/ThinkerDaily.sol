@@ -105,8 +105,6 @@ contract ThinkerDaily {
 		if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
 		if (msg.value != ENTRY_PRICE) revert WrongEntryPrice();
 		if (submitted[msg.sender]) revert AlreadySubmitted();
-
-		IThinkerRewards(rewardsManager).receiveRewards{value: msg.value * 50 / 1000}(address(0));
 		secretAnswers[msg.sender] = SecretAnswer(_hashedAnswer, "", true, block.timestamp);
 		unchecked {uniqueSubmissions++;} 
 		submitted[msg.sender] = true;

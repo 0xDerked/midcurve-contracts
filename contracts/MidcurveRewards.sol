@@ -1,7 +1,9 @@
 //SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.19;
 
-contract ThinkerRewards {
+import {EthNotSent} from "./MidcurveErrors.sol";
+
+contract MidcurveRewards {
     mapping(address => uint256) public rewardBalance;
     address public defaultReferrer;
     constructor(address _defaultReferrer) {
@@ -20,7 +22,7 @@ contract ThinkerRewards {
         uint256 amount = rewardBalance[msg.sender];
         rewardBalance[msg.sender] = 0;
         (bool success,) = msg.sender.call{value: amount}("");
-        require(success, "1");
+        if(!success) revert EthNotSent();
     }
 
     receive() external payable {

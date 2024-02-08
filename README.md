@@ -1,1 +1,1 @@
-# thinker-contracts-final
+# midcurve contracts

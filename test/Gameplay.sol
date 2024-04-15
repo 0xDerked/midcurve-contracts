@@ -1,8 +1,8 @@
 pragma solidity 0.8.19;
 import "forge-std/Test.sol";
-import "../../contracts/Midcurve.sol";
-import "../../contracts/MidcurveRewards.sol";
-import "../../contracts/Merkle.sol";
+import "../contracts/Midcurve.sol";
+import "../contracts/MidcurveRewards.sol";
+import "../contracts/Merkle.sol";
 
 contract Gameplay is Test {
 

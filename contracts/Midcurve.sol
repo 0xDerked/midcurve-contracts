@@ -28,8 +28,8 @@ contract Midcurve {
 	uint256 public expiryTimeClaim;
 	bytes32 public merkleRoot;
 
-	uint256 private protocolFee; 
-	bool private claimedProtocolFee;
+	uint256 public protocolFee; 
+	bool public claimedProtocolFee;
 
 	event AnswerSubmitted(address indexed playerAddress, string cid, uint256 timestamp);
 
@@ -108,6 +108,7 @@ contract Midcurve {
 
     function withdraw() external onlyOwner {
 		if (claimedProtocolFee) revert AlreadyClaimed();
+		if(protocolFee == 0) revert FeeNotSet();
 		claimedProtocolFee = true;
     	(bool success, ) = owner.call{value: protocolFee}("");
         if(!success) revert EthNotSent();

@@ -1,3 +1,4 @@
+//SPDX-License-Identifier:MIT
 pragma solidity 0.8.19;
 import "forge-std/Test.sol";
 import "../contracts/Midcurve.sol";
@@ -24,43 +25,47 @@ contract Gameplay is Test {
         vm.warp(START);
     }
 
-    // function testCreateMerkle() public {
-    //     Merkle m = new Merkle();
-    //     bytes32[] memory leaves = new bytes32[](3);
-    //     leaves[0] = keccak256(abi.encodePacked(player1, uint256(3 ether)));
-    //     leaves[1] = keccak256(abi.encodePacked(player2, uint256(2 ether)));
-    //     leaves[2] = keccak256(abi.encodePacked(player3, uint256(1 ether)));
-    //     bytes32 root = m.getRoot(leaves);
+    function testCreateMerkle() public {
+        Merkle m = new Merkle();
+        bytes32[] memory leaves = new bytes32[](3);
+        leaves[0] = keccak256(abi.encodePacked(player1, uint256(3 ether)));
+        leaves[1] = keccak256(abi.encodePacked(player2, uint256(2 ether)));
+        leaves[2] = keccak256(abi.encodePacked(player3, uint256(1 ether)));
+        bytes32 root = m.getRoot(leaves);
 
-    //     //begin game
-    //     midcurve.beginGame();
-    //     //send eth
-    //     vm.deal(address(midcurve), 10 ether);
-    //     //fast forward
-    //     vm.warp(START + 90_000);
-    //     //set fee
-    //     midcurve.setFee();
+        vm.startPrank(gameOwner);
 
-    //     midcurve.gradeRound(root);
+        //begin game
+        midcurve.beginGame();
+        //send eth
+        vm.deal(address(midcurve), 10 ether);
+        //fast forward
+        vm.warp(START + 90_000);
+        //set fee
+        midcurve.setFee();
+        //grade round
+        midcurve.gradeRound(root);
 
-    //     bytes32[] memory p1Proof = m.getProof(leaves, 0);
-    //     uint256 p1AvailToClaim = midcurve.availableToClaim(p1Proof, 3 ether, player1);
-    //     assertEq(p1AvailToClaim, 3 ether);
+        vm.stopPrank();
 
-    //     bytes32[] memory p2Proof = m.getProof(leaves, 1);
-    //     uint256 p2AvailToClaim = midcurve.availableToClaim(p2Proof, 2 ether, player2);
-    //     assertEq(p2AvailToClaim, 2 ether);
+        bytes32[] memory p1Proof = m.getProof(leaves, 0);
+        uint256 p1AvailToClaim = midcurve.availableToClaim(p1Proof, 3 ether, player1);
+        assertEq(p1AvailToClaim, 3 ether);
 
-    //     bytes32[] memory p3Proof = m.getProof(leaves, 2);
-    //     uint256 p3AvailToClaim = midcurve.availableToClaim(p3Proof, 1 ether, player3);
-    //     assertEq(p3AvailToClaim, 1 ether);
+        bytes32[] memory p2Proof = m.getProof(leaves, 1);
+        uint256 p2AvailToClaim = midcurve.availableToClaim(p2Proof, 2 ether, player2);
+        assertEq(p2AvailToClaim, 2 ether);
 
-    //     vm.prank(player1);
-    //     midcurve.claimWinnings(p1Proof, 3 ether);
-    //     assertEq(player1.balance, 3 ether);
-    //     uint256 p1AvailToClaimAfter = midcurve.availableToClaim(p1Proof, 3 ether, player1);
-    //     assertEq(p1AvailToClaimAfter, 0);
-    // }
+        bytes32[] memory p3Proof = m.getProof(leaves, 2);
+        uint256 p3AvailToClaim = midcurve.availableToClaim(p3Proof, 1 ether, player3);
+        assertEq(p3AvailToClaim, 1 ether);
+
+        vm.prank(player1);
+        midcurve.claimWinnings(p1Proof, 3 ether);
+        assertEq(player1.balance, 3 ether);
+        uint256 p1AvailToClaimAfter = midcurve.availableToClaim(p1Proof, 3 ether, player1);
+        assertEq(p1AvailToClaimAfter, 0);
+    }
 
     function test_BeginGame() public {
         assertEq(midcurve.expiryTimeAnswer(), 0);

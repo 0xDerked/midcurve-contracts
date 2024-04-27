@@ -5,4 +5,10 @@ libs = ['node_modules', 'lib']
 test = 'test'
 cache_path = 'forge-cache'
 
+[rpc_endpoints]
+base_sepolia = "${BASE_SEPOLIA_RPC}"
+
+[etherscan]
+base_sepolia = {key = "${BASESCAN_API_KEY}", url="https://api-sepolia.basescan.org/api"}
+
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

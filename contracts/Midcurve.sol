@@ -1,7 +1,7 @@
 //SPDX-License-Identifier:MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
-import './MerkleProof.sol';
+import '../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol';
 import './MidcurveErrors.sol';
 
 interface IMidcurveRewards {
@@ -100,7 +100,7 @@ contract Midcurve {
 
 	function claimWinnings(bytes32[] calldata _proof, uint256 _amount) external {
 		bytes32 leaf = keccak256(abi.encodePacked(msg.sender, _amount));
-		(bool verify,) = MerkleProof.verify(_proof, merkleRoot ,leaf);
+		bool verify = MerkleProof.verify(_proof, merkleRoot ,leaf);
 		if(!verify) revert MerkleNotVerified();
 		if (claimedWinnings[msg.sender]) revert AlreadyClaimed();
 	    claimedWinnings[msg.sender] = true;
@@ -116,7 +116,7 @@ contract Midcurve {
 
 	function availableToClaim(bytes32[] calldata _proof, uint256 _amount, address _claimer) external view returns (uint256) {
 		bytes32 leaf = keccak256(abi.encodePacked(_claimer, _amount));
-		(bool verify,) = MerkleProof.verify(_proof,merkleRoot, leaf);
+		bool verify = MerkleProof.verify(_proof,merkleRoot, leaf);
 		if(verify && !claimedWinnings[_claimer]){
 				return _amount;
 		}		

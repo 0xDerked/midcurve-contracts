@@ -1,9 +1,10 @@
 //SPDX-License-Identifier:MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 import "../lib/forge-std/src/Test.sol";
 import "../contracts/Midcurve.sol";
 import "../contracts/MidcurveRewards.sol";
 import "../contracts/Merkle.sol";
+import "../lib/forge-std/src/console.sol";
 
 contract Gameplay is Test {
 
@@ -64,6 +65,10 @@ contract Gameplay is Test {
         assertEq(player1.balance, 3 ether);
         uint256 p1AvailToClaimAfter = midcurve.availableToClaim(p1Proof, 3 ether, player1);
         assertEq(p1AvailToClaimAfter, 0);
+
+        uint256 val = 200;
+        bytes32 hashTest = keccak256(abi.encodePacked(0x70997970C51812dc3A010C7d01b50e0d17dc79C8, val));
+        console.logBytes32(hashTest);        
     }
 
     function test_BeginGame() public {

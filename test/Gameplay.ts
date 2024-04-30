@@ -2,12 +2,11 @@ import hre from 'hardhat'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
-import { parseEther, createWalletClient, http, keccak256, encodePacked } from 'viem'
+import { parseEther, createWalletClient, http } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
 import fs from 'fs'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
-import { MerkleTree } from 'merkletreejs'
 
 //This might yell at you if contracts have not been compiled with hardhat yet -- just run npx hardhat compile to generate the artifacts
 import {
@@ -99,11 +98,6 @@ describe('Midcurve', () => {
             const [wallet1, wallet2, wallet3] = await hre.viem.getWalletClients()
 
             const addr = wallet2.account.address
-            console.log(merkleTree.dump())
-            console.log(merkleTree.leafLookup([addr, '200']))
-            console.log(merkleTree.leafHash([addr, '200']))
-            console.log(addr)
-            console.log(keccak256(encodePacked(['address', 'uint256'], [addr, 200n])))
             for (const [i, v] of merkleTree.entries()) {
                 if (v[0] === addr) {
                     const proof = merkleTree.getProof(i)

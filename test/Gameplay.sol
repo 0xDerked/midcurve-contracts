@@ -30,9 +30,9 @@ contract Gameplay is Test {
     function testCreateMerkle() public {
         Merkle m = new Merkle();
         bytes32[] memory leaves = new bytes32[](3);
-        leaves[0] = keccak256(abi.encodePacked(player1, uint256(3 ether)));
-        leaves[1] = keccak256(abi.encodePacked(player2, uint256(2 ether)));
-        leaves[2] = keccak256(abi.encodePacked(player3, uint256(1 ether)));
+        leaves[0] = keccak256(bytes.concat(keccak256(abi.encode(player1, 3 ether))));
+        leaves[1] = keccak256(bytes.concat(keccak256(abi.encode(player2, 2 ether))));
+        leaves[2] = keccak256(bytes.concat(keccak256(abi.encode(player3, 1 ether))));
         bytes32 root = m.getRoot(leaves);
 
         vm.startPrank(gameOwner);

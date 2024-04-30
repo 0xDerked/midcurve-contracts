@@ -1,6 +1,6 @@
 //SPDX-License-Identifier:MIT
 pragma solidity 0.8.19;
-import "forge-std/Test.sol";
+import "../lib/forge-std/src/Test.sol";
 import "../contracts/Midcurve.sol";
 import "../contracts/MidcurveRewards.sol";
 import "../contracts/Merkle.sol";
@@ -11,6 +11,7 @@ contract Gameplay is Test {
     MidcurveRewards private midcurveRewards;
     address private owner = address(this);
     address private gameOwner = vm.addr(420);
+    address private contributor = vm.addr(69);
     address private player1 = vm.addr(1);
     address private player2 = vm.addr(2);
     address private player3 = vm.addr(3);
@@ -20,7 +21,7 @@ contract Gameplay is Test {
     function setUp() public {
         vm.startPrank(gameOwner);
         midcurveRewards = new MidcurveRewards(gameOwner);
-        midcurve = new Midcurve(address(midcurveRewards), gameOwner);
+        midcurve = new Midcurve(address(midcurveRewards), gameOwner, contributor);
         vm.stopPrank();
         vm.warp(START);
     }
@@ -41,8 +42,6 @@ contract Gameplay is Test {
         vm.deal(address(midcurve), 10 ether);
         //fast forward
         vm.warp(START + 90_000);
-        //set fee
-        midcurve.setFee();
         //grade round
         midcurve.gradeRound(root);
 
@@ -83,42 +82,19 @@ contract Gameplay is Test {
         vm.startPrank(player3);
         midcurve.submit{value: 0.02 ether}(cid, gameOwner);
         assertEq(midcurve.uniqueSubmissions(), 1);
-        assertEq(address(midcurve).balance, 0.019 ether);
+        assertEq(address(midcurve).balance, 0.018 ether);
         assertEq(midcurveRewards.rewardBalance(gameOwner), 0.001 ether);
     }
 
-    // function testChangeAnswer() public {
-    //     midcurve.beginGame();
-    //     string memory cid = 'abc123';
-    //     address user = vm.addr(3);
-    //     vm.deal(user, 10 ether);
-    //     assertFalse(midcurve.submitted(user));
-    //     vm.prank(user);
-    //     midcurve.submitClient{value: 0.03 ether}(cid);
-    //     assertTrue(midcurve.submitted(user));
-    //     assertEq(midcurve.uniqueSubmissions(), 1);
-    //     assertEq(address(midcurve).balance, 0.03 ether);
-    //     string memory cid2 = "abc124";
-    //     vm.prank(user);
-    //     midcurve.rebsubmitClient(cid2);
-    //     assertTrue(midcurve.submitted(user));
-    //     assertEq(midcurve.uniqueSubmissions(), 1);
-    //     assertEq(address(midcurve).balance, 0.03 ether);
-    // }
-
-    // function testFuzzSubmitAnswer(uint256 _secret, uint256 _answer) public {
-    //     vm.assume(_secret != 0);
-    //     vm.assume(_answer != 0);
-    //     _beginGame();
-    //     address user = vm.addr(3);
-    //     vm.deal(user, 10 ether);
-    //     bytes32 hashedAnswer = keccak256(abi.encodePacked(_answer, _secret));
-    //     assertFalse(midcurve.submitted(user));
-    //     vm.prank(user);
-    //     midcurve.submitAnswer{value: 0.05 ether}(hashedAnswer);
-    //     assertTrue(midcurve.submitted(user));
-    //     assertEq(midcurve.uniqueSubmissions(), 1);
-    //     assertEq(address(midcurve).balance, 0.05 ether);
-    // }
-
+    function testFail_SubmitAnswer() public {
+        vm.startPrank(gameOwner);
+        midcurve.beginGame();
+        string memory cid = 'abc123';
+        vm.deal(player3, 10 ether);
+        vm.startPrank(player3);
+        midcurve.submit{value: 0.01 ether}(cid, gameOwner);
+        assertEq(midcurve.uniqueSubmissions(), 0);
+        assertEq(address(midcurve).balance, 0);
+        assertEq(midcurveRewards.rewardBalance(gameOwner), 0);
+    }
 }

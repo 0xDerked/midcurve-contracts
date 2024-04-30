@@ -12,8 +12,13 @@ contract Midcurve {
 	
 	uint256 public constant TWENTY_FOUR_HOURS = 86_400; 
     uint256 public constant ENTRY_PRICE = 0.02 ether;
+	uint256 public constant CONTRIBUTOR_FEE = 0.0005 ether;
+	uint256 public constant REFERRAL_FEE = 0.001 ether;
+
 	address public immutable owner;
+	address public immutable contributor;
 	address public immutable rewardsManager;
+
 	uint256 public uniqueSubmissions;
 
 	struct SecretAnswer {
@@ -28,9 +33,6 @@ contract Midcurve {
 	uint256 public expiryTimeClaim;
 	bytes32 public merkleRoot;
 
-	uint256 public protocolFee; 
-	bool public claimedProtocolFee;
-
 	event AnswerSubmitted(address indexed playerAddress, string cid, uint256 timestamp);
 
 	modifier gameStarted {
@@ -43,9 +45,10 @@ contract Midcurve {
 		_;
 	}
 
-	constructor(address _rewardsManager, address _owner) {
+	constructor(address _rewardsManager, address _owner, address _contributor) {
 		owner = _owner;
 		rewardsManager = _rewardsManager;
+		contributor = _contributor;
     }
 
 	receive() external payable {}
@@ -64,7 +67,13 @@ contract Midcurve {
 
 		if (secretAnswer.timestamp != 0) revert AlreadySubmitted();
 
-		IMidcurveRewards(rewardsManager).receiveRewards{value: msg.value * 50 / 1000}(_referrer);
+		IMidcurveRewards(rewardsManager).receiveRewards{value: REFERRAL_FEE}(_referrer);
+
+		(bool contEth, ) = contributor.call{value: CONTRIBUTOR_FEE}("");
+		if(!contEth) revert EthNotSent();
+
+		(bool ownEth, ) = owner.call{value: CONTRIBUTOR_FEE}("");
+		if(!ownEth) revert EthNotSent();
 		
 		secretAnswer.cid = _cid;
 		secretAnswer.timestamp = block.timestamp;
@@ -84,14 +93,7 @@ contract Midcurve {
 		emit AnswerSubmitted(msg.sender, _cid, block.timestamp);
 	}
 
-	function setFee() external onlyOwner gameStarted {
-		if (protocolFee > 0) revert FeeAlreadySet();
-		if (block.timestamp <= expiryTimeAnswer) revert AnswerTimeInProgress();
-		protocolFee = address(this).balance *  50 / 1000;
-	}
-
 	function gradeRound(bytes32 _merkleRoot) external onlyOwner gameStarted {
-		if(protocolFee == 0) revert FeeNotSet();
 		if (block.timestamp <= expiryTimeAnswer) revert AnswerTimeInProgress();
 		merkleRoot = _merkleRoot;
 	}
@@ -105,14 +107,6 @@ contract Midcurve {
 		(bool success, ) = msg.sender.call{value:_amount}("");
 		if(!success) revert EthNotSent();
 	}
-
-    function withdraw() external onlyOwner {
-		if (claimedProtocolFee) revert AlreadyClaimed();
-		if(protocolFee == 0) revert FeeNotSet();
-		claimedProtocolFee = true;
-    	(bool success, ) = owner.call{value: protocolFee}("");
-        if(!success) revert EthNotSent();
-    }
 
 	function retrieveForfeited() external onlyOwner {
 		if (block.timestamp <= expiryTimeClaim) revert ClaimStillInProgress();

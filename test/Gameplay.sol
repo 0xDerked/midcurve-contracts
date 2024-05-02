@@ -2,14 +2,12 @@
 pragma solidity 0.8.20;
 import "../lib/forge-std/src/Test.sol";
 import "../contracts/Midcurve.sol";
-import "../contracts/MidcurveRewards.sol";
 import "../contracts/Merkle.sol";
 import "../lib/forge-std/src/console.sol";
 
 contract Gameplay is Test {
 
     Midcurve private midcurve;
-    MidcurveRewards private midcurveRewards;
     address private owner = address(this);
     address private gameOwner = vm.addr(420);
     address private contributor = vm.addr(69);
@@ -21,8 +19,7 @@ contract Gameplay is Test {
 
     function setUp() public {
         vm.startPrank(gameOwner);
-        midcurveRewards = new MidcurveRewards(gameOwner);
-        midcurve = new Midcurve(address(midcurveRewards), gameOwner, contributor);
+        midcurve = new Midcurve(gameOwner, contributor);
         vm.stopPrank();
         vm.warp(START);
     }
@@ -88,7 +85,6 @@ contract Gameplay is Test {
         midcurve.submit{value: 0.02 ether}(cid, gameOwner);
         assertEq(midcurve.uniqueSubmissions(), 1);
         assertEq(address(midcurve).balance, 0.018 ether);
-        assertEq(midcurveRewards.rewardBalance(gameOwner), 0.001 ether);
     }
 
     function testFail_SubmitAnswer() public {
@@ -100,6 +96,5 @@ contract Gameplay is Test {
         midcurve.submit{value: 0.01 ether}(cid, gameOwner);
         assertEq(midcurve.uniqueSubmissions(), 0);
         assertEq(address(midcurve).balance, 0);
-        assertEq(midcurveRewards.rewardBalance(gameOwner), 0);
     }
 }

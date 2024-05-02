@@ -4,10 +4,6 @@ pragma solidity 0.8.20;
 import '../lib/openzeppelin-contracts/contracts/utils/cryptography/MerkleProof.sol';
 import './MidcurveErrors.sol';
 
-interface IMidcurveRewards {
-	function receiveRewards(address _referrer) external payable;
-}
-
 contract Midcurve {
 	
 	uint256 public constant TWENTY_FOUR_HOURS = 86_400; 
@@ -17,7 +13,6 @@ contract Midcurve {
 
 	address public immutable owner;
 	address public immutable contributor;
-	address public immutable rewardsManager;
 
 	uint256 public uniqueSubmissions;
 
@@ -45,9 +40,8 @@ contract Midcurve {
 		_;
 	}
 
-	constructor(address _rewardsManager, address _owner, address _contributor) {
+	constructor(address _owner, address _contributor) {
 		owner = _owner;
-		rewardsManager = _rewardsManager;
 		contributor = _contributor;
     }
 
@@ -67,13 +61,23 @@ contract Midcurve {
 
 		if (secretAnswer.timestamp != 0) revert AlreadySubmitted();
 
-		IMidcurveRewards(rewardsManager).receiveRewards{value: REFERRAL_FEE}(_referrer);
+		if (_referrer != address(0)) {
+			(bool refEth, ) = _referrer.call{value: REFERRAL_FEE}("");
+			if(!refEth) revert EthNotSent();
+			
+			(bool contEth, ) = contributor.call{value: CONTRIBUTOR_FEE}("");
+			if(!contEth) revert EthNotSent();
 
-		(bool contEth, ) = contributor.call{value: CONTRIBUTOR_FEE}("");
-		if(!contEth) revert EthNotSent();
+			(bool ownEth, ) = owner.call{value: CONTRIBUTOR_FEE}("");
+			if(!ownEth) revert EthNotSent();
+		} else {
+						
+			(bool contEth, ) = contributor.call{value: REFERRAL_FEE}("");
+			if(!contEth) revert EthNotSent();
 
-		(bool ownEth, ) = owner.call{value: CONTRIBUTOR_FEE}("");
-		if(!ownEth) revert EthNotSent();
+			(bool ownEth, ) = owner.call{value: REFERRAL_FEE}("");
+			if(!ownEth) revert EthNotSent();
+		}
 		
 		secretAnswer.cid = _cid;
 		secretAnswer.timestamp = block.timestamp;

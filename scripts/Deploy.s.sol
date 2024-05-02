@@ -1,20 +1,8 @@
 //SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity 0.8.20;
 
 import "forge-std/Script.sol";
-import "../contracts/MidcurveRewards.sol";
 import "../contracts/Midcurve.sol";
-
-contract DeployRewards is Script {
-    
-    function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
-        address owner = vm.addr(deployerPrivateKey);
-        MidcurveRewards midcurveRewards = new MidcurveRewards(owner);
-        vm.stopBroadcast();
-    }
-}
 
 contract DeployMidcurve is Script {
     
@@ -22,7 +10,7 @@ contract DeployMidcurve is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         vm.startBroadcast(deployerPrivateKey);
         address owner = vm.addr(deployerPrivateKey);
-        Midcurve midcurve = new Midcurve(0x21CA2d30B09589Dbb56c20925d2200fbbc97b354, owner);
+        Midcurve midcurve = new Midcurve(owner, 0x6250D780c8415b26cA1ad290F233baeB215f131B);
         vm.stopBroadcast();
     }
 }

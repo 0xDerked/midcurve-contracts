@@ -33,6 +33,7 @@ contract Midcurve {
   
     mapping(address => SecretAnswer) public secretAnswers; 
 	mapping(address => bool) public claimedWinnings;
+	mapping(address => uint256) pubic nonces; 
 
     uint256 public expiryTimeAnswer;
 	uint256 public expiryTimeClaim;
@@ -65,7 +66,7 @@ contract Midcurve {
 		expiryTimeClaim = block.timestamp + TWENTY_FOUR_HOURS + 7_776_000; //90 days
 	}
 
-	function submit(string calldata _cid, address _referrer) external payable gameStarted {
+	function submit(string calldata _cid, address _referrer, bytes memory _signature) external payable gameStarted {
 		if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
 		if (msg.value != ENTRY_PRICE) revert WrongEntryPrice();
 
@@ -93,7 +94,10 @@ contract Midcurve {
 		secretAnswer.cid = _cid;
 		secretAnswer.timestamp = block.timestamp;
 
-		unchecked {uniqueSubmissions++;} 
+		unchecked {
+			uniqueSubmissions++;
+			nonces[msg.sender]++;
+		} 
 		emit AnswerSubmitted(msg.sender, _cid, block.timestamp);
 	}
 
@@ -146,5 +150,34 @@ contract Midcurve {
 	function claimAllGas() external onlyOwner {
 		IBlast(BLAST).claimAllGas(address(this), owner);
 	}
-}
+
+	function _getMessageHash(
+        address _sender,
+        string calldata _message,
+        uint256 _nonce
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_sender, _message, _nonce));
+    }
+
+	function _getEthSignedMessageHash(bytes32 _messageHash) internal pure returns (bytes32)
+    {
+        /*
+        Signature is produced by signing a keccak256 hash with the following format:
+        "\x19Ethereum Signed Message\n" + len(msg) + msg
+        */
+        return keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash)
+        );
+    }
+
+	function _verifySig(address _signer, string calldata _cid, uint256 _nonce, bytes memory _signature) internal pure returns (bool) {}
+
+	function _splitSig(bytes memory _signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+		require(_signature.length == 65, "Invalid signature length");
+		assembly {
+			r := mload(add(_signature, 32))
+			s := mload(add(_signature, 64))
+			v := byte(0, mload(add(_signature, 96))
+		}
+	}
 	

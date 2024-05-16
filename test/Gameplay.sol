@@ -79,12 +79,17 @@ contract Gameplay is Test {
     function test_SubmitAnswer() public {
         vm.startPrank(gameOwner);
         midcurve.beginGame();
+        uint256 ownerBalBefore = address(gameOwner).balance;
+        console.log(ownerBalBefore);
+        uint256 contributorBalBefore = address(contributor).balance;
         string memory cid = 'abc123';
         vm.deal(player3, 10 ether);
         vm.startPrank(player3);
-        midcurve.submit{value: 0.02 ether}(cid, gameOwner);
+        midcurve.submit{value: 0.02 ether}(cid, address(0));
         assertEq(midcurve.uniqueSubmissions(), 1);
         assertEq(address(midcurve).balance, 0.018 ether);
+        assertEq(address(gameOwner).balance, ownerBalBefore + 0.001 ether);
+        assertEq(address(contributor).balance, contributorBalBefore + 0.001 ether);
     }
 
     function testFail_SubmitAnswer() public {

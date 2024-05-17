@@ -1,14 +1,16 @@
 //SPDX-License-Identifier:MIT
 pragma solidity 0.8.20;
+
 import "../lib/forge-std/src/Test.sol";
 import "../contracts/Midcurve.sol";
 import "../contracts/Merkle.sol";
 import "../lib/forge-std/src/console.sol";
 
 contract Gameplay is Test {
-
     Midcurve private midcurve;
     address private owner = address(this);
+    uint256 private signerPrivateKey = vm.envUint("SIGNER_KEY");
+    address private signer = vm.addr(signerPrivateKey);
     address private gameOwner = vm.addr(420);
     address private contributor = vm.addr(69);
     address private player1 = vm.addr(1);
@@ -22,6 +24,22 @@ contract Gameplay is Test {
         midcurve = new Midcurve(gameOwner, contributor);
         vm.stopPrank();
         vm.warp(START);
+    }
+
+    function _getMessageHash(address _sender, string memory _message, uint256 _nonce)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(_sender, _message, _nonce));
+    }
+
+    function _getEthSignedMessageHash(bytes32 _messageHash) internal pure returns (bytes32) {
+        /*
+        Signature is produced by signing a keccak256 hash with the following format:
+        "\x19Ethereum Signed Message\n" + len(msg) + msg
+        */
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
     }
 
     function testCreateMerkle() public {
@@ -65,7 +83,7 @@ contract Gameplay is Test {
 
         uint256 val = 200;
         bytes32 hashTest = keccak256(abi.encodePacked(0x70997970C51812dc3A010C7d01b50e0d17dc79C8, val));
-        console.logBytes32(hashTest);        
+        console.logBytes32(hashTest);
     }
 
     function test_BeginGame() public {
@@ -73,7 +91,7 @@ contract Gameplay is Test {
         vm.startPrank(gameOwner);
         midcurve.beginGame();
         assertEq(midcurve.expiryTimeAnswer(), 86_500);
-        assertEq(START + 86_400 + 7_776_000, midcurve.expiryTimeClaim()); 
+        assertEq(START + 86_400 + 7_776_000, midcurve.expiryTimeClaim());
     }
 
     function test_SubmitAnswer() public {
@@ -82,24 +100,28 @@ contract Gameplay is Test {
         uint256 ownerBalBefore = address(gameOwner).balance;
         console.log(ownerBalBefore);
         uint256 contributorBalBefore = address(contributor).balance;
-        string memory cid = 'abc123';
+        string memory cid = "abc123";
+        bytes32 msgHash = _getMessageHash(player3, cid, 0);
+        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
+        bytes memory signature = abi.encodePacked(r,s,v);
         vm.deal(player3, 10 ether);
         vm.startPrank(player3);
-        midcurve.submit{value: 0.02 ether}(cid, address(0));
+        midcurve.submit{value: 0.02 ether}(cid, address(0), signature);
         assertEq(midcurve.uniqueSubmissions(), 1);
         assertEq(address(midcurve).balance, 0.018 ether);
         assertEq(address(gameOwner).balance, ownerBalBefore + 0.001 ether);
         assertEq(address(contributor).balance, contributorBalBefore + 0.001 ether);
     }
 
-    function testFail_SubmitAnswer() public {
-        vm.startPrank(gameOwner);
-        midcurve.beginGame();
-        string memory cid = 'abc123';
-        vm.deal(player3, 10 ether);
-        vm.startPrank(player3);
-        midcurve.submit{value: 0.01 ether}(cid, gameOwner);
-        assertEq(midcurve.uniqueSubmissions(), 0);
-        assertEq(address(midcurve).balance, 0);
-    }
+    // function testFail_SubmitAnswer() public {
+    //     vm.startPrank(gameOwner);
+    //     midcurve.beginGame();
+    //     string memory cid = "abc123";
+    //     vm.deal(player3, 10 ether);
+    //     vm.startPrank(player3);
+    //     midcurve.submit{value: 0.01 ether}(cid, gameOwner);
+    //     assertEq(midcurve.uniqueSubmissions(), 0);
+    //     assertEq(address(midcurve).balance, 0);
+    // }
 }

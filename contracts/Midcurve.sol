@@ -33,7 +33,7 @@ contract Midcurve {
   
     mapping(address => SecretAnswer) public secretAnswers; 
 	mapping(address => bool) public claimedWinnings;
-	mapping(address => uint256) pubic nonces; 
+	mapping(address => uint256) public nonces; 
 
     uint256 public expiryTimeAnswer;
 	uint256 public expiryTimeClaim;
@@ -69,6 +69,9 @@ contract Midcurve {
 	function submit(string calldata _cid, address _referrer, bytes memory _signature) external payable gameStarted {
 		if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
 		if (msg.value != ENTRY_PRICE) revert WrongEntryPrice();
+
+		bool verified = _verifySig(signer, msg.sender, _cid, nonces[msg.sender], _signature);
+		if(!verified) revert InvalidSignature();
 
 		SecretAnswer storage secretAnswer = secretAnswers[msg.sender];
 
@@ -170,14 +173,25 @@ contract Midcurve {
         );
     }
 
-	function _verifySig(address _signer, string calldata _cid, uint256 _nonce, bytes memory _signature) internal pure returns (bool) {}
+	function _verifySig(address _signer, address _sender, string calldata _cid, uint256 _nonce, bytes memory _signature) internal pure returns (bool) {
+		bytes32 messageHash = _getMessageHash(_sender, _cid, _nonce);
+		bytes32 ethSignedMessageHash = _getEthSignedMessageHash(messageHash);
+		address recoveredSigner = _recoverSigner(ethSignedMessageHash, _signature);
+		return recoveredSigner == _signer;
+	}
 
 	function _splitSig(bytes memory _signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
 		require(_signature.length == 65, "Invalid signature length");
 		assembly {
 			r := mload(add(_signature, 32))
 			s := mload(add(_signature, 64))
-			v := byte(0, mload(add(_signature, 96))
+			v := byte(0, mload(add(_signature, 96)))
 		}
 	}
+
+	function _recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) internal pure returns (address) {
+		(bytes32 r, bytes32 s, uint8 v) = _splitSig(_signature);
+		return ecrecover(_ethSignedMessageHash, v, r, s);
+	}
+}
 	

@@ -16,3 +16,4 @@ error CannotMatchHash();
 error FeeNotSet();
 error FeeAlreadySet();
 error ClaimStillInProgress();
+error InvalidSignature();

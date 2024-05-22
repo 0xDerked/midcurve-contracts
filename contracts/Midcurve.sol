@@ -15,10 +15,9 @@ contract Midcurve {
     address constant BLAST = 0x4300000000000000000000000000000000000002;
     address constant signer = 0x2B8274C301E7e1aAE6c160859f27867F94da6E8f;
 
-    uint256 public constant TWENTY_FOUR_HOURS = 86_400;
-    uint256 public constant ENTRY_PRICE = 0.02 ether;
-    uint256 public constant FIVE_PERCENT = 0.001 ether;
-    uint256 public constant TWO_HALF_PERCENT = 0.0005 ether;
+    uint256 public constant ENTRY_PRICE = 0.002 ether;
+    uint256 public constant FIVE_PERCENT = 0.0001 ether;
+    uint256 public constant TWO_HALF_PERCENT = 0.00005 ether;
 
     address public immutable owner;
     address public immutable contributor;
@@ -53,16 +52,16 @@ contract Midcurve {
     constructor(address _owner, address _contributor) {
         owner = _owner;
         contributor = _contributor;
-        //IBlast(BLAST).configureClaimableYield();
-        //IBlast(BLAST).configureClaimableGas();
+        IBlast(BLAST).configureClaimableYield();
+        IBlast(BLAST).configureClaimableGas();
     }
 
     receive() external payable {}
 
     function beginGame() external onlyOwner {
         if (expiryTimeAnswer > 0) revert GameAlreadyStarted();
-        expiryTimeAnswer = block.timestamp + TWENTY_FOUR_HOURS;
-        expiryTimeClaim = block.timestamp + TWENTY_FOUR_HOURS + 7_776_000; //90 days
+        expiryTimeAnswer = block.timestamp + 7 days;
+        expiryTimeClaim = block.timestamp + 91 days;
     }
 
     function submit(string calldata _cid, address _referrer, bytes memory _signature) external payable gameStarted {
@@ -103,11 +102,18 @@ contract Midcurve {
         emit AnswerSubmitted(msg.sender, _cid, block.timestamp);
     }
 
-    function rebsubmit(string calldata _cid) external gameStarted {
+    function rebsubmit(string calldata _cid,  bytes memory _signature) external gameStarted {
         SecretAnswer storage secretAnswer = secretAnswers[msg.sender];
 
         if (secretAnswer.timestamp == 0) revert NoFirstSubmission();
         if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
+
+        bool verified = _verifySig(signer, msg.sender, _cid, nonces[msg.sender], _signature);
+        if (!verified) revert InvalidSignature();
+
+        unchecked {
+            nonces[msg.sender]++;
+        }
 
         secretAnswer.cid = _cid;
         secretAnswer.timestamp = block.timestamp;
@@ -195,5 +201,9 @@ contract Midcurve {
     function _recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSig(_signature);
         return ecrecover(_ethSignedMessageHash, v, r, s);
+    }
+
+    function answerTimeExpired() external view returns (bool) {
+        return block.timestamp > expiryTimeAnswer;
     }
 }

@@ -1,11 +1,9 @@
 -include .env
 
-deploy-sepolia :; forge script scripts/Deploy.s.sol:DeployMidcurve --rpc-url ${BASE_SEPOLIA_RPC} --broadcast --verify -vvvv
-
-read-sepolia :; forge script scripts/Interact.s.sol:ReadScript --rpc-url ${BASE_SEPOLIA_RPC} --broadcast -vvvv
-
-begin-game-sepolia :; forge script scripts/Interact.s.sol:BeginGame --rpc-url ${BASE_SEPOLIA_RPC} --broadcast -vvvv
-
-deploy-begin-90-sepolia :; forge script scripts/Deploy.s.sol:DeployMidcurveTestAndBegin --rpc-url ${BASE_SEPOLIA_RPC} --broadcast --verify -vvvv
+deploy-begin-sepolia :; forge script scripts/Deploy.s.sol:DeployMidcurveTestAndBegin --rpc-url ${BLAST_SEPOLIA_RPC} --skip-simulation --broadcast --verify -vvvv
 
 test-gas :; forge test -vvv --gas-report
+
+interface :; cast interface ./out/Midcurve.sol/Midcurve.json -o ./contracts/IMidcurve.sol
+
+verify-sepolia :; forge verify-contract --rpc-url ${BLAST_SEPOLIA_RPC} ${BLAST_SEPOLIA_ADDRESS} ./contracts/Midcurve.sol:Midcurve --guess-constructor-args --watch

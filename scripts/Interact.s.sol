@@ -26,5 +26,4 @@ contract ReadScript is Script {
         vm.stopBroadcast();
     }
  }
-
  

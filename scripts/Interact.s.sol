@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
-import "../lib/forge-std/src/Script.sol";
-import "../lib/forge-std/src/console.sol";
-import "../contracts/IMidcurve.sol";
+import "forge-std/Script.sol";
+import "forge-std/console.sol";
+import "../src/IMidcurve.sol";
 
 contract ReadScript is Script {
     address payable public constant MIDCURVE = payable(0xe5bF5e3C63F87e71beDFcE684186dd76f3AA9743);

@@ -1,10 +1,11 @@
 //SPDX-License-Identifier:MIT
-pragma solidity 0.8.20;
+pragma solidity ^0.8.20;
 
-import "../lib/forge-std/src/Test.sol";
-import "../contracts/Midcurve.sol";
-import "../contracts/Merkle.sol";
-import "../lib/forge-std/src/console.sol";
+import "forge-std/Test.sol";
+import "../src/Midcurve.sol";
+import "../src/Merkle.sol";
+import "forge-std/console.sol";
+import "../src/mocks/BlastMock.sol";
 
 contract Gameplay is Test {
     Midcurve private midcurve;
@@ -20,6 +21,8 @@ contract Gameplay is Test {
     uint256 private constant START = 100;
 
     function setUp() public {
+        BlastMock blastMock = new BlastMock();
+        vm.etch(0x4300000000000000000000000000000000000002, address(blastMock).code);
         vm.startPrank(gameOwner);
         midcurve = new Midcurve(gameOwner, contributor);
         vm.stopPrank();
@@ -98,7 +101,6 @@ contract Gameplay is Test {
         vm.startPrank(gameOwner);
         midcurve.beginGame();
         uint256 ownerBalBefore = address(gameOwner).balance;
-        console.log(ownerBalBefore);
         uint256 contributorBalBefore = address(contributor).balance;
         string memory cid = "abc123";
         bytes32 msgHash = _getMessageHash(player3, cid, 0);

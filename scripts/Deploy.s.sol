@@ -2,9 +2,9 @@
 pragma solidity 0.8.20;
 
 import "forge-std/Script.sol";
-import "../contracts/Midcurve.sol";
-import "../contracts/MidcurveTest.sol";
-import "../contracts/mocks/BlastMock.sol";
+import "../src/Midcurve.sol";
+import "../src/MidcurveTest.sol";
+import "../src/mocks/BlastMock.sol";
 
 contract DeployMidcurve is Script {
     

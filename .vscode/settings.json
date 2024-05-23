@@ -1,9 +1,36 @@
 {
-    "solidity.defaultCompiler": "remote",
-    "solidity.compileUsingRemoteVersion": "v0.8.20+commit.a1b79de6",
-    "solidity.remappings": [
-        "forge-std/=lib/forge-std/src/",
-        "ds-test/=lib/forge-std/lib/ds-test/src/"
-    ],
-    "solidity.formatter": "forge"
+    "editor.inlineSuggest.enabled": true,
+    "workbench.iconTheme": "material-icon-theme",
+    "github.copilot.enable": {
+        "*": true,
+        "plaintext": true,
+        "markdown": true,
+        "scminput": false,
+        "yaml": false
+    },
+    "[python]": {
+        "editor.formatOnType": true
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "typescript.updateImportsOnFileMove.enabled": "always",
+    "solidity.solhintRules": {
+        "no-global-import": "off",
+        "contract-name-camelcase": "off"
+    },
+    "solidity.compileUsingLocalVersion": "latest",
+    "editor.formatOnSave": true,
+    "files.associations": {
+        "*.ts": "typescript"
+    },
+    "rust-analyzer.completion.autoself.enable": false,
+    "rust-analyzer.hover.actions.implementations.enable": false,
+    "editor.inlayHints.enabled": "off",
+    "workbench.sideBar.location": "right",
+    "workbench.colorTheme": "GitHub Dark (Web Based)",
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    },
+    "solidity.packageDefaultDependenciesContractsDirectory": "src",
+    "solidity.formatter": "forge",
+    "solidity.compileUsingRemoteVersion": "v0.8.20+commit.a1b79de6"
 }

@@ -2,10 +2,11 @@ import hre from 'hardhat'
 import { expect } from 'chai'
 import { loadFixture, time } from '@nomicfoundation/hardhat-network-helpers'
 
-import { parseEther, createWalletClient, http, zeroAddress } from 'viem'
+import { parseEther, createWalletClient, http, zeroAddress, keccak256, encodePacked } from 'viem'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 
 import fs from 'fs'
+import * as dotenv from 'dotenv'
 import { StandardMerkleTree } from '@openzeppelin/merkle-tree'
 
 //This might yell at you if contracts have not been compiled with hardhat yet -- just run npx hardhat compile to generate the artifacts
@@ -14,9 +15,11 @@ import {
     PublicClient,
     WalletClient,
 } from '@nomicfoundation/hardhat-viem/types'
-import { Midcurve$Type } from '../artifacts/contracts/Midcurve.sol/Midcurve'
+import { Midcurve$Type } from '../artifacts/src/Midcurve.sol/Midcurve'
 
 type Midcurve = GetContractReturnType<Midcurve$Type['abi']>
+
+dotenv.config()
 
 describe('Midcurve', () => {
     const MidcurveLockFixture = async () => {
@@ -35,6 +38,9 @@ describe('Midcurve', () => {
         let fundingWallet: WalletClient
         let playerWallets: WalletClient[]
         let merkleTree: StandardMerkleTree<string[]>
+        let signer: WalletClient
+
+        const signerPrivateKey = process.env.SIGNER_KEY as '0x{string}'
 
         before(async () => {
             const contracts = await loadFixture(MidcurveLockFixture)
@@ -43,6 +49,11 @@ describe('Midcurve', () => {
             const wallets = await hre.viem.getWalletClients()
             fundingWallet = wallets[0]
             playerWallets = []
+            signer = createWalletClient({
+                account: privateKeyToAccount(signerPrivateKey),
+                chain: pubClient.chain,
+                transport: http(),
+            })
         })
 
         it('creates 1k wallets and funds them', async () => {
@@ -67,7 +78,15 @@ describe('Midcurve', () => {
 
         it('submit 1k dummy transactions from the player wallets', async () => {
             for (let playerWallet of playerWallets) {
-                await midcurve.write.submit(['abc123', zeroAddress], {
+                const playerNonce = await midcurve.read.nonces([playerWallet.account.address])
+                const msgHash = keccak256(
+                    encodePacked(
+                        ['address', 'string', 'uint256'],
+                        [playerWallet.account.address, 'abc123', playerNonce],
+                    ),
+                )
+                const sig = await signer.signMessage({ message: { raw: msgHash } })
+                await midcurve.write.submit(['abc123', zeroAddress, sig], {
                     account: playerWallet.account,
                     value: parseEther('0.02'),
                 })

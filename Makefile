@@ -1,6 +1,6 @@
 -include .env
 
-deploy-begin-sepolia :; forge script scripts/Deploy.s.sol:DeployMidcurveTestAndBegin --rpc-url ${BLAST_SEPOLIA_RPC} --skip-simulation --broadcast --verify -vvvv
+deploy-begin-sepolia :; forge script scripts/testnet/Deploy.s.sol:DeployMidcurveTestAndBegin --rpc-url ${BLAST_SEPOLIA_RPC} --skip-simulation --broadcast --verify -vvvv
 
 test-gas :; forge test -vvv --gas-report
 

@@ -13,7 +13,6 @@ error EthNotSent();
 error MerkleNotVerified();
 error AlreadyClaimed();
 error DoesNotNeedRevealed();
-error CannotMatchHash();
 error FeeNotSet();
 error FeeAlreadySet();
 error ClaimStillInProgress();

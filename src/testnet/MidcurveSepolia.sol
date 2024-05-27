@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "./MidcurveErrors.sol";
+import "../MidcurveErrors.sol";
 
 interface IBlast {
     function configureClaimableYield() external;
@@ -11,13 +11,17 @@ interface IBlast {
     function claimAllGas(address contractAddress, address recipientOfGas) external returns (uint256);
 }
 
-contract Midcurve {
+/* THIS CONTRACT IS FOR TESTNET
+   THE FRONTEND SIGNATURE VERIFICATION MAY BE REMOVED
+   THE PRICE HAS BEEN DRASTICALLY REDUCED FOR TESTING PURPOSES */
+
+contract MidcurveSepolia {
     address private constant BLAST = 0x4300000000000000000000000000000000000002;
     address private constant SIGNER = 0x2B8274C301E7e1aAE6c160859f27867F94da6E8f;
 
-    uint256 public constant ENTRY_PRICE = 0.02 ether;
-    uint256 private constant FIVE_PERCENT = 0.001 ether;
-    uint256 private constant TWO_HALF_PERCENT = 0.0005 ether;
+    uint256 public constant ENTRY_PRICE = 0.002 ether;
+    uint256 private constant FIVE_PERCENT = 0.0001 ether;
+    uint256 private constant TWO_HALF_PERCENT = 0.00005 ether;
 
     address private immutable owner;
     address private immutable contributor;
@@ -68,19 +72,28 @@ contract Midcurve {
         if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
         if (msg.value != ENTRY_PRICE) revert WrongEntryPrice();
 
-        if(!_verifySig(msg.sender, _cid, nonces[msg.sender], _signature)) revert InvalidSignature();
+        bool verified = _verifySig(SIGNER, msg.sender, _cid, nonces[msg.sender], _signature);
+        if (!verified) revert InvalidSignature();
 
         SecretAnswer storage secretAnswer = secretAnswers[msg.sender];
 
         if (secretAnswer.timestamp != 0) revert AlreadySubmitted();
 
         if (_referrer != address(0)) {
-            _sendEth(_referrer, FIVE_PERCENT);
-            _sendEth(contributor, TWO_HALF_PERCENT);
-            _sendEth(owner, TWO_HALF_PERCENT);
+            (bool refEth,) = _referrer.call{value: FIVE_PERCENT}("");
+            if (!refEth) revert EthNotSent();
+
+            (bool contEth,) = contributor.call{value: TWO_HALF_PERCENT}("");
+            if (!contEth) revert EthNotSent();
+
+            (bool ownEth,) = owner.call{value: TWO_HALF_PERCENT}("");
+            if (!ownEth) revert EthNotSent();
         } else {
-            _sendEth(contributor, FIVE_PERCENT);
-            _sendEth(owner, FIVE_PERCENT);
+            (bool contEth,) = contributor.call{value: FIVE_PERCENT}("");
+            if (!contEth) revert EthNotSent();
+
+            (bool ownEth,) = owner.call{value: FIVE_PERCENT}("");
+            if (!ownEth) revert EthNotSent();
         }
 
         secretAnswer.cid = _cid;
@@ -99,7 +112,8 @@ contract Midcurve {
         if (secretAnswer.timestamp == 0) revert NoFirstSubmission();
         if (block.timestamp > expiryTimeAnswer) revert AnswerTimeExpired();
 
-        if(!_verifySig(msg.sender, _cid, nonces[msg.sender], _signature)) revert InvalidSignature();
+        bool verified = _verifySig(SIGNER, msg.sender, _cid, nonces[msg.sender], _signature);
+        if (!verified) revert InvalidSignature();
 
         unchecked {
             nonces[msg.sender]++;
@@ -117,10 +131,12 @@ contract Midcurve {
 
     function claimWinnings(bytes32[] calldata _proof, uint256 _amount) external {
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(msg.sender, _amount))));
-        if(!MerkleProof.verify(_proof, merkleRoot, leaf)) revert MerkleNotVerified();
+        bool verify = MerkleProof.verify(_proof, merkleRoot, leaf);
+        if (!verify) revert MerkleNotVerified();
         if (claimedWinnings[msg.sender]) revert AlreadyClaimed();
         claimedWinnings[msg.sender] = true;
-        _sendEth(msg.sender, _amount);
+        (bool success,) = msg.sender.call{value: _amount}("");
+        if (!success) revert EthNotSent();
     }
 
     function availableToClaim(bytes32[] calldata _proof, uint256 _amount, address _claimer)
@@ -129,7 +145,8 @@ contract Midcurve {
         returns (uint256)
     {
         bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(_claimer, _amount))));
-        if (MerkleProof.verify(_proof, merkleRoot, leaf) && !claimedWinnings[_claimer]) {
+        bool verify = MerkleProof.verify(_proof, merkleRoot, leaf);
+        if (verify && !claimedWinnings[_claimer]) {
             return _amount;
         }
         return 0;
@@ -137,7 +154,8 @@ contract Midcurve {
 
     function retrieveForfeited() external onlyOwner {
         if (block.timestamp <= expiryTimeClaim) revert ClaimStillInProgress();
-        _sendEth(owner, address(this).balance);
+        (bool success,) = owner.call{value: address(this).balance}("");
+        if (!success) revert EthNotSent();
     }
 
     function claimAllYield() external onlyOwner {
@@ -164,12 +182,15 @@ contract Midcurve {
         return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
     }
 
-    function _verifySig(address _sender, string calldata _cid, uint256 _nonce, bytes memory _signature)
+    function _verifySig(address _signer, address _sender, string calldata _cid, uint256 _nonce, bytes memory _signature)
         internal
         pure
         returns (bool)
     {
-        return _recoverSigner(_getEthSignedMessageHash(_getMessageHash(_sender, _cid, _nonce)), _signature) == SIGNER;
+        bytes32 messageHash = _getMessageHash(_sender, _cid, _nonce);
+        bytes32 ethSignedMessageHash = _getEthSignedMessageHash(messageHash);
+        address recoveredSigner = _recoverSigner(ethSignedMessageHash, _signature);
+        return recoveredSigner == _signer;
     }
 
     function _splitSig(bytes memory _signature) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
@@ -184,11 +205,6 @@ contract Midcurve {
     function _recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = _splitSig(_signature);
         return ecrecover(_ethSignedMessageHash, v, r, s);
-    }
-
-    function _sendEth(address _to, uint256 _amount) internal {
-        (bool success,) = _to.call{value: _amount}("");
-        if (!success) revert EthNotSent();
     }
 
     function answerTimeExpired() external view returns (bool) {

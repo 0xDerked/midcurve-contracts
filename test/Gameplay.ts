@@ -21,6 +21,8 @@ type Midcurve = GetContractReturnType<Midcurve$Type['abi']>
 
 dotenv.config()
 
+//You must comment out the IBLAST calls in the constructor or this will fail. There is no equivalent of etch in hardhat.
+
 describe('Midcurve', () => {
     const MidcurveLockFixture = async () => {
         const [owner, contributor] = await hre.viem.getWalletClients()

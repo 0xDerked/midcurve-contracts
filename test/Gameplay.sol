@@ -116,14 +116,10 @@ contract Gameplay is Test {
         midcurve.beginGame();
         uint256 ownerBalBefore = address(gameOwner).balance;
         uint256 contributorBalBefore = address(contributor).balance;
-        string memory cid = "abc123";
-        bytes32 msgHash = _getMessageHash(player3, cid, midcurve.nonces(player3));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player3, "abc123");
         vm.deal(player3, 10 ether);
         vm.startPrank(player3);
-        midcurve.submit{value: 0.02 ether}(cid, address(0), signature);
+        midcurve.submit{value: 0.02 ether}("abc123", address(0), signature);
         assertEq(midcurve.uniqueSubmissions(), 1);
         assertEq(address(midcurve).balance, 0.018 ether);
         assertEq(address(gameOwner).balance, ownerBalBefore + 0.001 ether);
@@ -134,9 +130,7 @@ contract Gameplay is Test {
         vm.prank(gameOwner);
         midcurve.beginGame();
         vm.deal(player1, 1 ether);
-        bytes32 ethSignedMsgMash = _getEthSignedMessageHash(_getMessageHash(player1, "abc123", midcurve.nonces(player1)));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgMash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player1, "abc123");
         vm.prank(player1);
         midcurve.submit{value: 0.02 ether}("abc123", player2, signature);
         assertEq(midcurve.uniqueSubmissions(), 1);
@@ -152,13 +146,8 @@ contract Gameplay is Test {
         vm.deal(player1, 1 ether);
         vm.deal(player2, 1 ether);
 
-        bytes32 ethSignedMsgMash = _getEthSignedMessageHash(_getMessageHash(player1, "abc123", midcurve.nonces(player1)));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgMash);
-        bytes memory sig1 = abi.encodePacked(r,s,v);
-
-        ethSignedMsgMash = _getEthSignedMessageHash(_getMessageHash(player2, "abc123", midcurve.nonces(player2)));
-        (v, r, s) = vm.sign(signerPrivateKey, ethSignedMsgMash);
-        bytes memory sig2 = abi.encodePacked(r,s,v);
+        bytes memory sig1 = _getSignature(player1, "abc123");
+        bytes memory sig2 = _getSignature(player2, "abc123");
 
         vm.prank(player1);
         midcurve.submit{value: 0.02 ether}("abc123", address(0), sig1);
@@ -182,17 +171,13 @@ contract Gameplay is Test {
         vm.prank(gameOwner);
         midcurve.beginGame();
         vm.deal(player1, 1 ether);
-        bytes32 ethSignedMsgMash = _getEthSignedMessageHash(_getMessageHash(player1, "abc123", midcurve.nonces(player1)));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgMash);
-        bytes memory sig1 = abi.encodePacked(r,s,v);
+        bytes memory sig1 = _getSignature(player1, "abc123");
         vm.prank(player1);
         midcurve.submit{value: 0.02 ether}("abc123", address(0), sig1);
         assertEq(midcurve.uniqueSubmissions(), 1);
         assertEq(address(midcurve).balance, 0.018 ether);
 
-        ethSignedMsgMash = _getEthSignedMessageHash(_getMessageHash(player1, "def345", midcurve.nonces(player1)));
-        (v, r, s) = vm.sign(signerPrivateKey, ethSignedMsgMash);
-        bytes memory sig2 = abi.encodePacked(r,s,v);
+        bytes memory sig2 = _getSignature(player1, "def345");
         vm.prank(player1);
         midcurve.rebsubmit("def345", sig2);
         assertEq(midcurve.uniqueSubmissions(), 1);
@@ -304,6 +289,12 @@ contract Gameplay is Test {
         return signatures;
     }
 
+    function _getSignature(address _player, string memory _cid) internal view returns(bytes memory) {
+        bytes32 msgHash = _getEthSignedMessageHash(_getMessageHash(_player, _cid, midcurve.nonces(_player)));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, msgHash);
+        return abi.encodePacked(r,s,v);
+    }
+
 
     /** 
         REVERSION TESTS
@@ -397,11 +388,8 @@ contract Gameplay is Test {
     }
 
     function test_RevertSubmitAnswer_GameNotStarted() public {
+        bytes memory signature = _getSignature(player1, "abc123");
         vm.startPrank(player1);
-        bytes32 msgHash = _getMessageHash(player1, "abc123", midcurve.nonces(player1));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
         vm.expectRevert(GameNotStarted.selector);
         midcurve.submit("abc123", address(0), signature);
     }
@@ -411,10 +399,7 @@ contract Gameplay is Test {
         midcurve.beginGame();
         vm.assume(_time < 90 days && START + _time > midcurve.expiryTimeAnswer());
         vm.warp(START + _time);
-        bytes32 msgHash = _getMessageHash(player1, "abc123", midcurve.nonces(player1));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player1, "abc123");
         vm.expectRevert(AnswerTimeExpired.selector);
         vm.prank(player1);
         midcurve.submit("abc123", address(0), signature);
@@ -425,10 +410,7 @@ contract Gameplay is Test {
         vm.prank(gameOwner);
         midcurve.beginGame();
         vm.deal(player1, 1 ether);
-        bytes32 msgHash = _getMessageHash(player1, "abc123", midcurve.nonces(player1));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player1, "abc123");
         vm.expectRevert(WrongEntryPrice.selector);
         vm.prank(player1);
         midcurve.submit{value: _amount}("abc123", address(0), signature);
@@ -439,10 +421,7 @@ contract Gameplay is Test {
         vm.prank(gameOwner);
         midcurve.beginGame();
         vm.deal(player1, 1 ether);
-        bytes32 msgHash = _getMessageHash(player1, "abc123", midcurve.nonces(player1));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player1, "abc123");
         vm.expectRevert(WrongEntryPrice.selector);
         vm.prank(player1);
         midcurve.submit{value: _amount}("abc123", address(0), signature);
@@ -453,21 +432,47 @@ contract Gameplay is Test {
         vm.prank(gameOwner);
         midcurve.beginGame();
         vm.deal(player1, 1 ether);
-        bytes32 msgHash = _getMessageHash(player1, _cid, midcurve.nonces(player1));
-        bytes32 ethSignedMsgHash = _getEthSignedMessageHash(msgHash);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(signerPrivateKey, ethSignedMsgHash);
-        bytes memory signature = abi.encodePacked(r,s,v);
+        bytes memory signature = _getSignature(player1, _cid);
         vm.expectRevert(InvalidSignature.selector);
         vm.prank(player1);
         midcurve.submit{value: 0.02 ether}("abc123", address(0), signature);
     }
 
-    function test_RevertSubmitAnswer_AlreadySubmitted() public {}
+    function test_RevertSubmitAnswer_AlreadySubmitted() public {
+        vm.prank(gameOwner);
+        midcurve.beginGame();
+        vm.deal(player1, 1 ether);
+        bytes memory signature = _getSignature(player1, "abc123");
+        vm.prank(player1);
+        midcurve.submit{value: 0.02 ether}("abc123", address(0), signature);
 
-    function test_RevertResubmit_NoFirstSubmission() public {}
+        signature = _getSignature(player1, "def345");
+        vm.expectRevert(AlreadySubmitted.selector);
+        vm.prank(player1);
+        midcurve.submit{value: 0.02 ether}("def345", address(0), signature);
+    }
 
-    function test_RevertResubmit_InvalidSignature() public {}
+    function test_RevertResubmit_NoFirstSubmission() public {
+        vm.prank(gameOwner);
+        midcurve.beginGame();
+        vm.deal(player1, 1 ether);
+        bytes memory signature = _getSignature(player1, "abc123");
+        vm.expectRevert(NoFirstSubmission.selector);
+        vm.prank(player1);
+        midcurve.rebsubmit("abc123", signature);
+    }
 
-    function test_RevertResubmit_NotPayable() public {}
+    function test_RevertResubmit_InvalidSignature() public {
+        vm.prank(gameOwner);
+        midcurve.beginGame();
+        vm.deal(player1, 1 ether);
+        bytes memory signature = _getSignature(player1, "abc123");
+        vm.prank(player1);
+        midcurve.submit{value: 0.02 ether}("abc123", address(0), signature);
+
+        vm.expectRevert(InvalidSignature.selector);
+        vm.prank(player1);
+        midcurve.rebsubmit("def345", signature);
+    }
 
 }
